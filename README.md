@@ -22,25 +22,77 @@ Real-time English conversation practice web application with local AI and TTS. N
 - [LM Studio](https://lmstudio.ai/) running with a loaded model
 - Git LFS (for downloading TTS models)
 
-### Installation
+### Installation by Platform
 
-1. Clone the repository:
+#### macOS
+
 ```bash
+# Install uv and git-lfs
+brew install uv git-lfs
+git lfs install
+
+# Clone and setup
 git clone https://github.com/raym33/localchat.git
 cd localchat
-```
-
-2. Download TTS models from HuggingFace:
-```bash
 git clone https://huggingface.co/Supertone/supertonic assets
-```
-
-3. Install dependencies:
-```bash
 uv sync
 ```
 
-4. Configure environment (optional):
+#### Windows (PowerShell)
+
+```powershell
+# Install uv (run as Administrator or use winget)
+powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"
+
+# Install Git LFS (download from https://git-lfs.com or use winget)
+winget install GitHub.GitLFS
+git lfs install
+
+# Clone and setup
+git clone https://github.com/raym33/localchat.git
+cd localchat
+git clone https://huggingface.co/Supertone/supertonic assets
+uv sync
+```
+
+#### Linux (Ubuntu/Debian)
+
+```bash
+# Install uv
+curl -LsSf https://astral.sh/uv/install.sh | sh
+source $HOME/.local/bin/env
+
+# Install git-lfs
+sudo apt-get install git-lfs
+git lfs install
+
+# Clone and setup
+git clone https://github.com/raym33/localchat.git
+cd localchat
+git clone https://huggingface.co/Supertone/supertonic assets
+uv sync
+```
+
+#### Linux (Fedora/RHEL)
+
+```bash
+# Install uv
+curl -LsSf https://astral.sh/uv/install.sh | sh
+source $HOME/.local/bin/env
+
+# Install git-lfs
+sudo dnf install git-lfs
+git lfs install
+
+# Clone and setup
+git clone https://github.com/raym33/localchat.git
+cd localchat
+git clone https://huggingface.co/Supertone/supertonic assets
+uv sync
+```
+
+### Configuration (Optional)
+
 ```bash
 cp .env.example .env
 # Edit .env with your LM Studio settings
