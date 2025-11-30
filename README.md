@@ -2,6 +2,10 @@
 
 Real-time English conversation practice web application with local AI and TTS. No cloud APIs required - everything runs on your machine for complete privacy.
 
+<p align="center">
+  <img src="docs/screenshot.png" alt="LocalChat Interface" width="700">
+</p>
+
 ## Features
 
 - **Real-time Voice Conversation**: Practice English speaking with AI-powered responses
