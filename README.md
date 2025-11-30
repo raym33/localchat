@@ -230,6 +230,76 @@ If you're using a "thinking" model (like Qwen thinking variants), the app automa
 - Check the URL in config matches your LM Studio settings
 - Make sure a model is loaded in LM Studio
 
+## Roadmap
+
+Features and improvements we'd love to see:
+
+- [ ] **Voice selection UI** - Let users choose between F1, F2, M1, M2 voices from the interface
+- [ ] **Conversation export** - Save conversations as text/JSON for review
+- [ ] **Vocabulary tracker** - Track new words learned during conversations
+- [ ] **Grammar correction mode** - Option for more explicit grammar feedback
+- [ ] **Pronunciation feedback** - Compare user pronunciation with TTS output
+- [ ] **Conversation topics** - Preset topics/scenarios for guided practice
+- [ ] **Progress tracking** - Statistics on conversation length, vocabulary used
+- [ ] **Mobile app** - Native iOS/Android apps with offline support
+- [ ] **Multiple language support** - Practice other languages beyond English
+- [ ] **Docker container** - One-command deployment with Docker
+- [ ] **Ollama support** - Alternative to LM Studio for local LLM
+
+## Contributing
+
+Contributions are welcome! This is an open source project under MIT license.
+
+### How to Contribute
+
+1. **Fork the repository** on GitHub
+2. **Clone your fork**:
+   ```bash
+   git clone https://github.com/YOUR_USERNAME/localchat.git
+   cd localchat
+   ```
+3. **Create a feature branch**:
+   ```bash
+   git checkout -b feature/your-feature-name
+   ```
+4. **Make your changes** and test them locally
+5. **Commit with clear messages**:
+   ```bash
+   git commit -m "feat: add voice selection dropdown"
+   ```
+6. **Push and create a Pull Request**:
+   ```bash
+   git push origin feature/your-feature-name
+   ```
+
+### Development Setup
+
+```bash
+# Install dev dependencies
+uv sync --extra dev
+
+# Run tests
+uv run pytest
+
+# Format code
+uv run black backend/
+uv run ruff check backend/ --fix
+```
+
+### Areas Where Help is Needed
+
+- **Frontend improvements** - Better UI/UX, mobile responsiveness
+- **Testing** - Unit tests, integration tests
+- **Documentation** - Tutorials, video guides
+- **Translations** - README in other languages
+- **Bug fixes** - Check the Issues tab
+
+### Code Style
+
+- Python: Follow PEP 8, use Black formatter
+- JavaScript: Use modern ES6+ syntax
+- Commits: Use [Conventional Commits](https://conventionalcommits.org/)
+
 ## Acknowledgments
 
 - [Supertone](https://github.com/supertone-inc/supertonic) for the TTS model
@@ -238,4 +308,4 @@ If you're using a "thinking" model (like Qwen thinking variants), the app automa
 
 ## License
 
-MIT
+MIT - See [LICENSE](LICENSE) for details.
