@@ -1,0 +1,70 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Virtual environments
+.venv/
+venv/
+ENV/
+env/
+
+# Environment files
+.env
+.env.local
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# Cache
+.cache/
+*.cache
+
+# Logs
+*.log
+logs/
+
+# Audio files (generated)
+*.wav
+*.mp3
+static/audio/*.wav
+
+# OS
+.DS_Store
+Thumbs.db
+
+# uv
+.uv/
+
+# Model cache
+.huggingface/
+models/
+
+# TTS assets (download separately from HuggingFace)
+assets/
+
+# Temp files
+tmp/
+temp/
+*.tmp
