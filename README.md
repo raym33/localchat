@@ -300,10 +300,74 @@ uv run ruff check backend/ --fix
 - JavaScript: Use modern ES6+ syntax
 - Commits: Use [Conventional Commits](https://conventionalcommits.org/)
 
+## Experimental: Mobile with Termux + Ollama
+
+> **Note**: This is experimental and requires a powerful Android device (8GB+ RAM recommended).
+
+You can run LocalChat entirely on your Android phone using Termux and Ollama:
+
+### Requirements
+
+- Android device with 8GB+ RAM
+- [Termux](https://f-droid.org/packages/com.termux/) from F-Droid (not Play Store)
+- ~4GB storage for a small model
+
+### Setup
+
+```bash
+# In Termux, install dependencies
+pkg update && pkg upgrade
+pkg install python git
+
+# Install Ollama (experimental ARM build)
+curl -fsSL https://ollama.com/install.sh | sh
+
+# Pull a small model (qwen2.5:1.5b works on most devices)
+ollama pull qwen2.5:1.5b
+
+# Clone LocalChat
+git clone https://github.com/raym33/localchat.git
+cd localchat
+
+# Install Python dependencies
+pip install -r requirements.txt
+
+# Download TTS assets (warning: ~250MB)
+git clone https://huggingface.co/Supertone/supertonic assets
+```
+
+### Running
+
+```bash
+# Terminal 1: Start Ollama server
+ollama serve
+
+# Terminal 2: Start LocalChat (modify config for Ollama)
+# Edit backend/config.py: lm_studio_url = "http://localhost:11434"
+python run.py
+```
+
+Open `http://localhost:8000` in your Android browser.
+
+### Limitations
+
+- Slow inference on mobile CPUs (expect 5-10s per response)
+- TTS may be slow without GPU acceleration
+- Battery drain is significant
+- Web Speech API requires Chrome/Chromium
+
+### Tips
+
+- Use smaller models: `qwen2.5:1.5b`, `phi3:mini`, `gemma:2b`
+- Keep phone plugged in during use
+- Close other apps to free RAM
+- Consider running server on PC, access from phone via local network
+
 ## Acknowledgments
 
 - [Supertone](https://github.com/supertone-inc/supertonic) for the TTS model
 - [LM Studio](https://lmstudio.ai/) for local LLM inference
+- [Ollama](https://ollama.com/) for easy local model deployment
 - Web Speech API for browser-based speech recognition
 
 ## License
