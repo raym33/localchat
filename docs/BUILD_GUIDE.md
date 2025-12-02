@@ -8,6 +8,71 @@ A comprehensive guide documenting the entire process of building LocalChat - a r
 
 ---
 
+## Quick Reference (TL;DR)
+
+> **Just want to get it running?** Skip to [Step 1: Project Setup](#step-1-project-setup).
+> **Want to understand the architecture?** See [Architecture Deep Dive](#architecture-deep-dive).
+
+### The 60-Second Summary
+
+```
+┌──────────────────────────────────────────────────────────────────┐
+│                        LocalChat in a Nutshell                    │
+├──────────────────────────────────────────────────────────────────┤
+│                                                                   │
+│   User speaks → Browser STT → WebSocket → FastAPI backend        │
+│                                              ↓                    │
+│                                        LM Studio (local LLM)     │
+│                                              ↓                    │
+│   User hears ← Play audio ← WebSocket ← Supertonic TTS          │
+│                                                                   │
+└──────────────────────────────────────────────────────────────────┘
+```
+
+### Key Files (What Does What)
+
+| File | Purpose | Lines |
+|------|---------|-------|
+| `backend/main.py` | FastAPI app, WebSocket handler | ~150 |
+| `backend/conversation.py` | LLM integration, message history | ~200 |
+| `backend/tts_service.py` | Text-to-speech with ONNX | ~200 |
+| `frontend/index.html` | Single-page HTML | ~70 |
+| `static/js/app.js` | Frontend logic, WebSocket client | ~300 |
+| `static/css/styles.css` | Dark theme styling | ~300 |
+
+### Core Dependencies
+
+```
+fastapi + uvicorn  → Web server + WebSocket
+httpx              → Async HTTP for LM Studio API
+onnxruntime        → Run TTS models on CPU
+numpy              → Audio array processing
+```
+
+### One-Liner Architecture
+
+**Browser** (Web Speech API + HTML/JS) ↔ **FastAPI** (WebSocket + async) ↔ **LM Studio** (local LLM) + **Supertonic** (TTS)
+
+### Quick Commands
+
+```bash
+# Setup
+git clone https://github.com/raym33/localchat && cd localchat
+git clone https://huggingface.co/Supertone/supertonic assets
+uv sync
+
+# Run
+uv run python run.py
+
+# Test
+uv run pytest
+
+# Format
+uv run black backend/ && uv run ruff check --fix
+```
+
+---
+
 ## Table of Contents
 
 1. [Project Overview](#project-overview)
@@ -25,7 +90,12 @@ A comprehensive guide documenting the entire process of building LocalChat - a r
 13. [Performance Optimization](#performance-optimization)
 14. [Deployment Options](#deployment-options)
 15. [Lessons Learned](#lessons-learned)
-16. [Resources](#resources)
+16. [Testing](#testing)
+17. [Security Considerations](#security-considerations)
+18. [FAQ](#frequently-asked-questions-faq)
+19. [Cloud Alternatives Comparison](#cloud-alternatives-comparison)
+20. [Visual Architecture (Mermaid)](#visual-architecture-mermaid-diagrams)
+21. [Resources](#resources)
 
 ---
 
@@ -2038,6 +2108,583 @@ See [README.md - Experimental: Mobile with Termux + Ollama](../README.md#experim
 2. **Async everywhere**: Python's async is great for I/O-bound apps
 3. **Separation of concerns**: Backend services are cleanly separated
 4. **Configuration from environment**: Makes deployment flexible
+
+---
+
+## Testing
+
+### Test Strategy
+
+| Test Type | What We Test | Tools |
+|-----------|--------------|-------|
+| Unit tests | Individual functions | pytest |
+| Integration tests | API endpoints | pytest + httpx |
+| E2E tests | Full user flows | Manual / Playwright (future) |
+
+### Example Unit Tests
+
+```python
+# tests/test_conversation.py
+import pytest
+from backend.conversation import ConversationManager
+
+class TestConversationManager:
+    """Test conversation management functionality."""
+
+    def test_create_conversation(self):
+        """Test creating a new conversation."""
+        manager = ConversationManager(
+            lm_studio_url="http://localhost:1234",
+            model="test-model"
+        )
+        conv = manager.create_conversation("test-123")
+
+        assert conv.id == "test-123"
+        assert len(conv.messages) == 0
+
+    def test_add_message(self):
+        """Test adding messages to conversation."""
+        manager = ConversationManager(
+            lm_studio_url="http://localhost:1234",
+            model="test-model"
+        )
+        manager.create_conversation("test-123")
+
+        msg = manager.add_message("test-123", "user", "Hello!")
+
+        assert msg.role == "user"
+        assert msg.content == "Hello!"
+
+        conv = manager.get_conversation("test-123")
+        assert len(conv.messages) == 1
+
+    def test_clean_response_thinking_tags(self):
+        """Test removal of <think> tags from response."""
+        manager = ConversationManager(
+            lm_studio_url="http://localhost:1234",
+            model="test-model"
+        )
+
+        # Test with thinking tags
+        text = "<think>Let me think about this...</think>Hello there!"
+        cleaned = manager._clean_response(text)
+        assert cleaned == "Hello there!"
+
+        # Test without thinking tags
+        text = "Just a normal response."
+        cleaned = manager._clean_response(text)
+        assert cleaned == "Just a normal response."
+
+        # Test with markdown
+        text = "Here is **bold** and *italic* text."
+        cleaned = manager._clean_response(text)
+        assert "**" not in cleaned
+        assert "*" not in cleaned
+
+    def test_clear_conversation(self):
+        """Test clearing conversation history."""
+        manager = ConversationManager(
+            lm_studio_url="http://localhost:1234",
+            model="test-model"
+        )
+        manager.create_conversation("test-123")
+        manager.add_message("test-123", "user", "Hello!")
+        manager.add_message("test-123", "assistant", "Hi!")
+
+        manager.clear_conversation("test-123")
+
+        conv = manager.get_conversation("test-123")
+        assert len(conv.messages) == 0
+```
+
+### Example Integration Tests
+
+```python
+# tests/test_api.py
+import pytest
+from fastapi.testclient import TestClient
+from backend.main import app
+
+client = TestClient(app)
+
+class TestHealthEndpoint:
+    """Test health check endpoint."""
+
+    def test_health_returns_200(self):
+        """Health endpoint should return 200."""
+        response = client.get("/health")
+        assert response.status_code == 200
+        assert response.json()["status"] == "healthy"
+
+class TestRootEndpoint:
+    """Test root endpoint."""
+
+    def test_root_serves_html(self):
+        """Root should serve HTML page."""
+        response = client.get("/")
+        assert response.status_code == 200
+        assert "text/html" in response.headers["content-type"]
+
+class TestStaticFiles:
+    """Test static file serving."""
+
+    def test_css_accessible(self):
+        """CSS file should be accessible."""
+        response = client.get("/static/css/styles.css")
+        assert response.status_code == 200
+        assert "text/css" in response.headers["content-type"]
+
+    def test_js_accessible(self):
+        """JS file should be accessible."""
+        response = client.get("/static/js/app.js")
+        assert response.status_code == 200
+        assert "javascript" in response.headers["content-type"]
+```
+
+### Example TTS Tests
+
+```python
+# tests/test_tts.py
+import pytest
+import numpy as np
+from backend.tts_service import Tokenizer
+
+class TestTokenizer:
+    """Test TTS tokenizer."""
+
+    def test_preprocess_text(self):
+        """Test text preprocessing."""
+        # Create mock indexer (list where index = unicode, value = token_id)
+        indexer = [0] * 128  # ASCII range
+        for i in range(97, 123):  # a-z
+            indexer[i] = i - 96  # a=1, b=2, etc.
+        indexer[32] = 27  # space
+
+        tokenizer = Tokenizer(indexer)
+
+        # Test basic preprocessing
+        result = tokenizer._preprocess_text("  Hello   World  ")
+        assert result == "Hello World"
+
+    def test_text_to_unicode_values(self):
+        """Test unicode conversion."""
+        indexer = [0] * 128
+        tokenizer = Tokenizer(indexer)
+
+        result = tokenizer._text_to_unicode_values("abc")
+
+        assert len(result) == 3
+        assert result[0] == 97  # 'a'
+        assert result[1] == 98  # 'b'
+        assert result[2] == 99  # 'c'
+```
+
+### Running Tests
+
+```bash
+# Run all tests
+uv run pytest
+
+# Run with coverage
+uv run pytest --cov=backend --cov-report=html
+
+# Run specific test file
+uv run pytest tests/test_conversation.py
+
+# Run with verbose output
+uv run pytest -v
+
+# Run only failing tests
+uv run pytest --lf
+```
+
+### Test Coverage Goals
+
+| Component | Target Coverage | Priority |
+|-----------|-----------------|----------|
+| `conversation.py` | 80%+ | High |
+| `tts_service.py` | 70%+ | Medium |
+| `main.py` | 60%+ | Medium |
+| `config.py` | 90%+ | Low |
+
+---
+
+## Security Considerations
+
+### What LocalChat Does Right
+
+| Security Aspect | Implementation | Why It Matters |
+|-----------------|----------------|----------------|
+| **100% Local** | No external API calls | Your conversations never leave your machine |
+| **No Data Storage** | In-memory only | Nothing persisted to disk |
+| **No Authentication** | Single-user design | No credentials to leak |
+| **No External Dependencies** | After setup, runs offline | No supply chain attacks during use |
+
+### Potential Security Concerns
+
+#### 1. LM Studio API Exposure
+
+```python
+# Current: Binds to all interfaces
+lm_studio_url = "http://0.0.0.0:1234"
+
+# Risk: Anyone on your network can access LM Studio
+# Mitigation: Use localhost only
+lm_studio_url = "http://127.0.0.1:1234"
+```
+
+#### 2. WebSocket Without Authentication
+
+```python
+# Current: Anyone can connect
+@app.websocket("/ws/{client_id}")
+async def websocket_endpoint(websocket: WebSocket, client_id: str):
+    await connection_manager.connect(websocket, client_id)
+```
+
+**Risk**: In a multi-user environment, anyone could connect.
+
+**Mitigation for production**:
+```python
+from fastapi import Depends, HTTPException
+from fastapi.security import HTTPBasic, HTTPBasicCredentials
+
+security = HTTPBasic()
+
+async def verify_credentials(credentials: HTTPBasicCredentials = Depends(security)):
+    if credentials.username != "user" or credentials.password != "password":
+        raise HTTPException(status_code=401)
+    return credentials.username
+
+@app.websocket("/ws/{client_id}")
+async def websocket_endpoint(
+    websocket: WebSocket,
+    client_id: str,
+    user: str = Depends(verify_credentials)
+):
+    # Now authenticated
+    pass
+```
+
+#### 3. Input Validation
+
+```python
+# Current: Basic text cleaning
+def _clean_response(self, text: str) -> str:
+    # Removes thinking tags and markdown
+    pass
+
+# Recommendation: Add input length limits
+MAX_MESSAGE_LENGTH = 10000
+
+async def generate_response(self, conversation_id: str, user_message: str) -> str:
+    if len(user_message) > MAX_MESSAGE_LENGTH:
+        return "Message too long. Please keep messages under 10,000 characters."
+    # ... rest of method
+```
+
+#### 4. CORS in Production
+
+```python
+# Current: Allow all origins (OK for local development)
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+)
+
+# Production: Restrict to specific origins
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:8000"],
+)
+```
+
+### Security Checklist
+
+- [ ] Run LM Studio on localhost only (127.0.0.1)
+- [ ] Don't expose port 8000 to the internet without auth
+- [ ] Keep dependencies updated (`uv sync --upgrade`)
+- [ ] Review model outputs for sensitive data before sharing
+- [ ] Use HTTPS if deploying beyond localhost
+
+### What Data Is Processed?
+
+```
+┌──────────────────────────────────────────────────────────────────┐
+│                     Data Flow & Storage                          │
+├──────────────────────────────────────────────────────────────────┤
+│                                                                   │
+│  User Input          →  In-memory only  →  Discarded on restart  │
+│  Conversation History →  In-memory only  →  Discarded on restart  │
+│  Generated Audio      →  Base64 in memory →  Not saved to disk   │
+│  TTS Models          →  Read from disk   →  assets/ folder       │
+│                                                                   │
+│  NOTHING is sent to external servers                             │
+│  NOTHING is logged to files by default                           │
+│  NOTHING persists after closing the app                          │
+│                                                                   │
+└──────────────────────────────────────────────────────────────────┘
+```
+
+---
+
+## Frequently Asked Questions (FAQ)
+
+### Setup & Installation
+
+**Q: Do I need a GPU?**
+> No! LocalChat uses ONNX Runtime which runs on CPU. A GPU helps with LM Studio inference speed, but isn't required.
+
+**Q: How much disk space do I need?**
+> - LocalChat code: ~5MB
+> - TTS models (assets/): ~250MB
+> - LLM model (in LM Studio): 2-8GB depending on model
+> - Total: ~3-10GB
+
+**Q: Can I use Ollama instead of LM Studio?**
+> Yes! Just change the URL in config:
+> ```python
+> lm_studio_url = "http://localhost:11434"  # Ollama default
+> ```
+> And use `/api/chat` endpoint format (Ollama is OpenAI-compatible).
+
+**Q: What Python version do I need?**
+> Python 3.10 or higher. Tested on 3.10, 3.11, and 3.12.
+
+### Usage Issues
+
+**Q: Microphone isn't working**
+> 1. Use `http://localhost:8000` (not 127.0.0.1)
+> 2. Grant microphone permission when browser asks
+> 3. Try Chrome/Edge (best support) instead of Firefox/Safari
+
+**Q: No audio is playing**
+> 1. Check that `assets/` folder exists with ONNX models
+> 2. Check browser console for errors
+> 3. Make sure autoplay isn't blocked (click in the page first)
+
+**Q: Responses are cut off**
+> Increase `max_tokens` in conversation.py:
+> ```python
+> "max_tokens": 2048,  # Was 1024
+> ```
+
+**Q: I see `<think>` tags in responses**
+> You're using a thinking model. The code should strip these, but if not:
+> ```python
+> if '</think>' in text:
+>     text = text.split('</think>')[-1]
+> ```
+
+**Q: LM Studio connection failed**
+> 1. Make sure LM Studio is running
+> 2. A model must be loaded (not just downloaded)
+> 3. Local server must be started in LM Studio
+> 4. Check the URL matches (default: http://localhost:1234)
+
+### Development
+
+**Q: How do I add a new voice?**
+> Download additional voice styles to `assets/voice_styles/` and update config:
+> ```python
+> tts_voice: str = "M1"  # or F2, M2
+> ```
+
+**Q: How do I change the system prompt?**
+> Edit `SYSTEM_PROMPT` in `backend/conversation.py`.
+
+**Q: How do I add conversation persistence?**
+> Add SQLite or JSON file storage:
+> ```python
+> import json
+>
+> def save_conversation(conv_id: str, messages: list):
+>     with open(f"conversations/{conv_id}.json", "w") as f:
+>         json.dump(messages, f)
+> ```
+
+**Q: Can I use a different TTS?**
+> Yes, implement the same interface in `tts_service.py`:
+> ```python
+> async def generate_speech(self, text: str) -> Optional[bytes]:
+>     # Your TTS implementation
+>     return wav_bytes
+> ```
+
+### Performance
+
+**Q: How can I make responses faster?**
+> 1. Use a smaller LLM (3-4B vs 7B+ parameters)
+> 2. Enable GPU in LM Studio if available
+> 3. Reduce `max_tokens` if responses don't need to be long
+> 4. Use a faster computer
+
+**Q: Why is TTS slow?**
+> TTS runs on CPU (ONNX). First response is slower (model loading). Subsequent responses should be 0.5-2s. For faster TTS, you could explore GPU-based options like Dia2.
+
+---
+
+## Cloud Alternatives Comparison
+
+### Why Local vs Cloud?
+
+| Factor | LocalChat (Local) | ChatGPT Voice | ElevenLabs + GPT |
+|--------|------------------|---------------|------------------|
+| **Cost** | Free | $20/month | $5-30/month |
+| **Privacy** | 100% local | Data on servers | Data on servers |
+| **Internet** | Not required | Required | Required |
+| **Latency** | 2-5s | 1-2s | 2-4s |
+| **Voice Quality** | Good | Excellent | Excellent |
+| **Setup** | 10-30 min | 2 min | 5 min |
+
+### Cost Analysis (1 Year)
+
+```
+┌────────────────────────────────────────────────────────────────────┐
+│                    Annual Cost Comparison                          │
+├────────────────────────────────────────────────────────────────────┤
+│                                                                     │
+│  LocalChat:     $0  (one-time setup, runs forever)                 │
+│                                                                     │
+│  ChatGPT Plus:  $240/year ($20/month)                              │
+│                                                                     │
+│  ElevenLabs:    $60-360/year (depending on usage)                  │
+│    + OpenAI:    $0-50/year (API usage)                             │
+│                                                                     │
+│  Savings with LocalChat: $60 - $400/year                           │
+│                                                                     │
+└────────────────────────────────────────────────────────────────────┘
+```
+
+### When to Use What
+
+| Use Case | Recommendation | Why |
+|----------|----------------|-----|
+| Learning English privately | **LocalChat** | No data sharing |
+| Quick conversations | ChatGPT Voice | Lowest latency |
+| Professional voice work | ElevenLabs | Highest quality |
+| Offline use (travel, etc.) | **LocalChat** | Works without internet |
+| Privacy-critical | **LocalChat** | 100% local |
+| Easiest setup | ChatGPT Voice | Just subscribe |
+
+### Feature Comparison
+
+| Feature | LocalChat | ChatGPT Voice | Google Bard |
+|---------|-----------|---------------|-------------|
+| Voice input | Yes | Yes | Yes |
+| Voice output | Yes | Yes | Yes |
+| Conversation memory | Yes | Yes | Yes |
+| Custom system prompt | Yes | Limited | No |
+| Works offline | Yes | No | No |
+| Open source | Yes | No | No |
+| Multiple voices | 4 voices | 1 voice | 1 voice |
+| Language learning focus | Yes | General | General |
+| Custom LLM | Any local model | GPT-4 only | PaLM only |
+
+---
+
+## Visual Architecture (Mermaid Diagrams)
+
+### System Overview
+
+```mermaid
+graph TB
+    subgraph Browser["Browser"]
+        UI[Web UI]
+        STT[Speech Recognition]
+        Audio[Audio Player]
+    end
+
+    subgraph Server["FastAPI Backend"]
+        WS[WebSocket Handler]
+        Conv[Conversation Manager]
+        TTS[TTS Service]
+    end
+
+    subgraph External["Local Services"]
+        LM[LM Studio / Ollama]
+    end
+
+    UI -->|User types/speaks| STT
+    STT -->|Text| WS
+    WS -->|Message| Conv
+    Conv -->|Chat completion| LM
+    LM -->|Response| Conv
+    Conv -->|Text| TTS
+    TTS -->|Audio bytes| WS
+    WS -->|base64 audio| Audio
+    Audio -->|Play| UI
+```
+
+### Message Sequence
+
+```mermaid
+sequenceDiagram
+    participant U as User
+    participant B as Browser
+    participant F as FastAPI
+    participant L as LM Studio
+    participant T as TTS
+
+    U->>B: Speaks "Hello"
+    B->>B: Web Speech API transcription
+    B->>F: WebSocket: {type: "message", text: "Hello"}
+    F->>F: Add to conversation history
+    F->>L: POST /v1/chat/completions
+    L->>L: LLM inference (~2s)
+    L->>F: {content: "<think>...</think>Hi there!"}
+    F->>F: Clean response (remove think tags)
+    F->>B: WebSocket: {type: "response", text: "Hi there!"}
+    B->>B: Display message
+    F->>T: generate_speech("Hi there!")
+    T->>T: ONNX inference (~1s)
+    T->>F: WAV bytes
+    F->>B: WebSocket: {type: "audio", audio: "base64..."}
+    B->>U: Plays audio
+```
+
+### Component Dependencies
+
+```mermaid
+graph LR
+    subgraph Core["Core Components"]
+        main[main.py]
+        conv[conversation.py]
+        tts[tts_service.py]
+        config[config.py]
+    end
+
+    subgraph Frontend["Frontend"]
+        html[index.html]
+        css[styles.css]
+        js[app.js]
+    end
+
+    main --> conv
+    main --> tts
+    main --> config
+    conv --> config
+    tts --> config
+
+    html --> css
+    html --> js
+```
+
+### State Machine (WebSocket)
+
+```mermaid
+stateDiagram-v2
+    [*] --> Disconnected
+    Disconnected --> Connecting: connect()
+    Connecting --> Connected: onopen
+    Connecting --> Disconnected: onerror
+    Connected --> Processing: receive message
+    Processing --> Connected: send response
+    Connected --> Disconnected: onclose
+    Disconnected --> Connecting: auto-reconnect (3s)
+```
+
+> **Note**: To render Mermaid diagrams, use a Markdown viewer that supports Mermaid (GitHub, VS Code with extension, etc.) or paste into [mermaid.live](https://mermaid.live).
 
 ---
 
