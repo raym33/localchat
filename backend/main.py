@@ -290,6 +290,15 @@ async def websocket_endpoint(websocket: WebSocket, client_id: str):
                     client_id, {"type": "pong"}
                 )
 
+            elif message_type == "set_topic":
+                # Set conversation topic context
+                topic = data.get("topic", "")
+                prompt = data.get("prompt", "")
+                conversation_manager.set_topic_context(client_id, topic, prompt)
+                await connection_manager.send_json(
+                    client_id, {"type": "topic_set", "topic": topic}
+                )
+
             elif message_type == "pronunciation":
                 # Handle pronunciation analysis request
                 if not PRONUNCIATION_AVAILABLE:

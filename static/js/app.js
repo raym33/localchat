@@ -47,7 +47,25 @@ class ConversationApp {
             settingsModal: document.getElementById('settingsModal'),
             settingsBtn: document.getElementById('settingsBtn'),
             startConversationBtn: document.getElementById('startConversationBtn'),
-            newConversationBtn: document.getElementById('newConversationBtn')
+            newConversationBtn: document.getElementById('newConversationBtn'),
+            topicsBtn: document.getElementById('topicsBtn'),
+            topicsModal: document.getElementById('topicsModal')
+        };
+
+        // Topic prompts for guided conversations
+        this.topicPrompts = {
+            'daily-life': "Let's talk about daily life! What does a typical day look like for you? Tell me about your morning routine or what you usually do after work or school.",
+            'travel': "I'd love to hear about travel! Have you been on any trips recently, or is there a place you've always dreamed of visiting? What attracts you to that destination?",
+            'work': "Let's discuss work and careers! What do you do for a living, or what career are you interested in? What do you find most challenging or rewarding about it?",
+            'hobbies': "Tell me about your hobbies! What do you enjoy doing in your free time? How did you get started with your favorite hobby?",
+            'food': "Let's talk about food! What's your favorite cuisine or dish? Do you enjoy cooking, or do you prefer eating out?",
+            'technology': "Technology is fascinating! What gadgets or apps do you use daily? Are there any new technologies that excite or concern you?",
+            'movies': "I'd love to chat about movies and TV! What's the last film or series you really enjoyed? What genres do you prefer?",
+            'health': "Let's discuss health and fitness! Do you have any exercise routines or wellness practices? What motivates you to stay healthy?",
+            'environment': "The environment is an important topic. What do you think about climate change? Do you practice any sustainable habits in your daily life?",
+            'culture': "Let's explore culture and arts! Do you enjoy music, painting, or other art forms? Have you experienced any interesting cultural traditions?",
+            'education': "Education is a great topic! What subjects did you enjoy studying? Are you currently learning anything new, like a language or skill?",
+            'random': null  // Will pick a random topic
         };
 
         // Initialize
@@ -460,6 +478,27 @@ class ConversationApp {
             });
         }
 
+        // Topics modal
+        this.elements.topicsBtn.addEventListener('click', () => {
+            this.openTopics();
+        });
+
+        this.elements.topicsModal.querySelector('.modal-close').addEventListener('click', () => {
+            this.closeTopics();
+        });
+
+        this.elements.topicsModal.querySelector('.modal-overlay').addEventListener('click', () => {
+            this.closeTopics();
+        });
+
+        // Topic card clicks
+        this.elements.topicsModal.querySelectorAll('.topic-card').forEach(card => {
+            card.addEventListener('click', () => {
+                const topic = card.dataset.topic;
+                this.selectTopic(topic);
+            });
+        });
+
         // Replay audio buttons (event delegation)
         this.elements.messagesContainer.addEventListener('click', (e) => {
             const replayBtn = e.target.closest('.replay-audio');
@@ -539,6 +578,49 @@ class ConversationApp {
 
     closeSettings() {
         this.elements.settingsModal.classList.add('hidden');
+    }
+
+    // Topics Modal Methods
+    openTopics() {
+        this.elements.topicsModal.classList.remove('hidden');
+    }
+
+    closeTopics() {
+        this.elements.topicsModal.classList.add('hidden');
+    }
+
+    selectTopic(topic) {
+        this.closeTopics();
+
+        // Get the prompt for the selected topic
+        let prompt = this.topicPrompts[topic];
+
+        // Handle "random" topic
+        if (topic === 'random' || !prompt) {
+            const topics = Object.keys(this.topicPrompts).filter(t => t !== 'random');
+            const randomTopic = topics[Math.floor(Math.random() * topics.length)];
+            prompt = this.topicPrompts[randomTopic];
+        }
+
+        // Ensure conversation is started
+        if (!this.elements.welcomeScreen.classList.contains('hidden')) {
+            this.elements.welcomeScreen.classList.add('hidden');
+            this.elements.chatContainer.classList.remove('hidden');
+            this.elements.inputArea.classList.remove('hidden');
+        }
+
+        // Add the AI's topic introduction as a message and send to backend
+        this.addMessage('assistant', prompt);
+        this.lastAssistantText = prompt;
+
+        // Also set the current topic context on the server
+        if (this.isConnected && this.ws) {
+            this.ws.send(JSON.stringify({
+                type: 'set_topic',
+                topic: topic,
+                prompt: prompt
+            }));
+        }
     }
 
     // Pronunciation Practice Methods

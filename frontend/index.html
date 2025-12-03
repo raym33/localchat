@@ -19,6 +19,14 @@
                     English Conversation
                 </h1>
                 <div class="header-actions">
+                    <button id="topicsBtn" class="btn btn-secondary" title="Conversation Topics">
+                        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+                            <line x1="9" y1="9" x2="15" y2="9"/>
+                            <line x1="9" y1="13" x2="13" y2="13"/>
+                        </svg>
+                        Topics
+                    </button>
                     <button id="newConversationBtn" class="btn btn-secondary" title="Start New Conversation">
                         <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <path d="M12 5v14M5 12h14"/>
@@ -174,6 +182,87 @@
                             <span class="toggle-slider"></span>
                         </label>
                         <p class="setting-hint">When enabled, record yourself repeating the AI's response to get pronunciation feedback.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Topics Modal -->
+        <div id="topicsModal" class="modal hidden">
+            <div class="modal-overlay"></div>
+            <div class="modal-content topics-modal">
+                <div class="modal-header">
+                    <h3>Conversation Topics</h3>
+                    <button type="button" class="btn btn-icon modal-close" title="Close">
+                        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <line x1="18" y1="6" x2="6" y2="18"/>
+                            <line x1="6" y1="6" x2="18" y2="18"/>
+                        </svg>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <p class="topics-intro">Choose a topic to start a guided conversation:</p>
+                    <div class="topics-grid">
+                        <button type="button" class="topic-card" data-topic="daily-life">
+                            <span class="topic-icon">🌅</span>
+                            <span class="topic-name">Daily Life</span>
+                            <span class="topic-desc">Routines, habits, everyday activities</span>
+                        </button>
+                        <button type="button" class="topic-card" data-topic="travel">
+                            <span class="topic-icon">✈️</span>
+                            <span class="topic-name">Travel</span>
+                            <span class="topic-desc">Trips, destinations, experiences</span>
+                        </button>
+                        <button type="button" class="topic-card" data-topic="work">
+                            <span class="topic-icon">💼</span>
+                            <span class="topic-name">Work & Career</span>
+                            <span class="topic-desc">Jobs, interviews, professional life</span>
+                        </button>
+                        <button type="button" class="topic-card" data-topic="hobbies">
+                            <span class="topic-icon">🎨</span>
+                            <span class="topic-name">Hobbies</span>
+                            <span class="topic-desc">Interests, sports, creative activities</span>
+                        </button>
+                        <button type="button" class="topic-card" data-topic="food">
+                            <span class="topic-icon">🍽️</span>
+                            <span class="topic-name">Food & Cooking</span>
+                            <span class="topic-desc">Recipes, restaurants, cuisines</span>
+                        </button>
+                        <button type="button" class="topic-card" data-topic="technology">
+                            <span class="topic-icon">💻</span>
+                            <span class="topic-name">Technology</span>
+                            <span class="topic-desc">Gadgets, apps, digital trends</span>
+                        </button>
+                        <button type="button" class="topic-card" data-topic="movies">
+                            <span class="topic-icon">🎬</span>
+                            <span class="topic-name">Movies & TV</span>
+                            <span class="topic-desc">Films, series, entertainment</span>
+                        </button>
+                        <button type="button" class="topic-card" data-topic="health">
+                            <span class="topic-icon">🏃</span>
+                            <span class="topic-name">Health & Fitness</span>
+                            <span class="topic-desc">Exercise, wellness, lifestyle</span>
+                        </button>
+                        <button type="button" class="topic-card" data-topic="environment">
+                            <span class="topic-icon">🌍</span>
+                            <span class="topic-name">Environment</span>
+                            <span class="topic-desc">Climate, sustainability, nature</span>
+                        </button>
+                        <button type="button" class="topic-card" data-topic="culture">
+                            <span class="topic-icon">🎭</span>
+                            <span class="topic-name">Culture & Arts</span>
+                            <span class="topic-desc">Music, art, traditions</span>
+                        </button>
+                        <button type="button" class="topic-card" data-topic="education">
+                            <span class="topic-icon">📚</span>
+                            <span class="topic-name">Education</span>
+                            <span class="topic-desc">Learning, school, languages</span>
+                        </button>
+                        <button type="button" class="topic-card" data-topic="random">
+                            <span class="topic-icon">🎲</span>
+                            <span class="topic-name">Surprise Me!</span>
+                            <span class="topic-desc">Random interesting topic</span>
+                        </button>
                     </div>
                 </div>
             </div>

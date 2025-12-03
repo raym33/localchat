@@ -1007,3 +1007,89 @@ body {
     color: var(--warning-color);
     margin-right: 0.25rem;
 }
+
+/* =================================
+   Conversation Topics Modal
+   ================================= */
+
+.topics-modal {
+    max-width: 700px;
+    width: 95%;
+}
+
+.topics-intro {
+    color: var(--text-secondary);
+    margin-bottom: 1.25rem;
+    font-size: 0.95rem;
+}
+
+.topics-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: 0.875rem;
+}
+
+.topic-card {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 1rem;
+    background: var(--bg-tertiary);
+    border: 2px solid var(--border-color);
+    border-radius: var(--border-radius);
+    cursor: pointer;
+    transition: all var(--transition-fast);
+    text-align: center;
+}
+
+.topic-card:hover {
+    border-color: var(--primary-color);
+    background: rgba(59, 130, 246, 0.1);
+    transform: translateY(-2px);
+}
+
+.topic-card:active {
+    transform: translateY(0);
+}
+
+.topic-icon {
+    font-size: 2rem;
+    line-height: 1;
+}
+
+.topic-name {
+    font-weight: 600;
+    color: var(--text-primary);
+    font-size: 0.95rem;
+}
+
+.topic-desc {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    line-height: 1.3;
+}
+
+/* Responsive adjustments for topics */
+@media (max-width: 500px) {
+    .topics-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 0.625rem;
+    }
+
+    .topic-card {
+        padding: 0.75rem 0.5rem;
+    }
+
+    .topic-icon {
+        font-size: 1.5rem;
+    }
+
+    .topic-name {
+        font-size: 0.85rem;
+    }
+
+    .topic-desc {
+        display: none;
+    }
+}

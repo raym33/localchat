@@ -229,6 +229,24 @@ class ConversationManager:
         idx = len(conv.messages) % len(default_responses)
         return default_responses[idx]
 
+    def set_topic_context(self, conversation_id: str, topic: str, prompt: str) -> None:
+        """Set a topic context for guided conversation.
+
+        This adds the AI's topic introduction as the first assistant message,
+        so the conversation flows naturally from the chosen topic.
+        """
+        conv = self.get_conversation(conversation_id)
+        if conv is None:
+            conv = self.create_conversation(conversation_id)
+
+        # Clear existing messages and start fresh with the topic
+        conv.messages.clear()
+
+        # Add the topic prompt as an assistant message so the AI knows the context
+        self.add_message(conversation_id, "assistant", prompt)
+
+        logger.info(f"Set topic '{topic}' for conversation {conversation_id}")
+
     def clear_conversation(self, conversation_id: str) -> None:
         """Clear a conversation's history."""
         if conversation_id in self.conversations:
