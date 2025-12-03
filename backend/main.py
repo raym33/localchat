@@ -19,6 +19,15 @@ from .config import config
 from .conversation import get_conversation_manager
 from .tts_service import get_tts_service
 
+# Try to import pronunciation service (optional dependency)
+try:
+    from .pronunciation_service import get_pronunciation_service, PRONUNCIATION_AVAILABLE
+except ImportError:
+    PRONUNCIATION_AVAILABLE = False
+
+    def get_pronunciation_service():
+        return None
+
 # Configure logging
 logging.basicConfig(
     level=logging.INFO,
@@ -38,6 +47,11 @@ async def lifespan(app: FastAPI):
     # Initialize TTS service
     tts_service = get_tts_service()
     init_task = asyncio.create_task(tts_service.initialize())
+
+    # Initialize pronunciation service if available
+    if PRONUNCIATION_AVAILABLE:
+        pronunciation_service = get_pronunciation_service()
+        asyncio.create_task(pronunciation_service.initialize())
 
     yield
 
@@ -275,6 +289,62 @@ async def websocket_endpoint(websocket: WebSocket, client_id: str):
                 await connection_manager.send_json(
                     client_id, {"type": "pong"}
                 )
+
+            elif message_type == "pronunciation":
+                # Handle pronunciation analysis request
+                if not PRONUNCIATION_AVAILABLE:
+                    await connection_manager.send_json(
+                        client_id,
+                        {
+                            "type": "pronunciation_feedback",
+                            "score": 0,
+                            "summary": "Pronunciation feedback is not available. Install with: uv sync --extra pronunciation",
+                            "errors": [],
+                        },
+                    )
+                    continue
+
+                audio_base64 = data.get("audio", "")
+                expected_text = data.get("expected_text", "")
+
+                if not audio_base64 or not expected_text:
+                    continue
+
+                pronunciation_service = get_pronunciation_service()
+                feedback = await pronunciation_service.analyze_pronunciation(
+                    audio_base64, expected_text
+                )
+
+                if feedback:
+                    await connection_manager.send_json(
+                        client_id,
+                        {
+                            "type": "pronunciation_feedback",
+                            "score": feedback.overall_score,
+                            "summary": feedback.summary,
+                            "transcribed": feedback.transcribed_text,
+                            "expected": feedback.original_text,
+                            "errors": [
+                                {
+                                    "word": e.word,
+                                    "expected": e.expected_phoneme,
+                                    "detected": e.detected_phoneme,
+                                    "tip": e.tip,
+                                }
+                                for e in feedback.errors
+                            ],
+                        },
+                    )
+                else:
+                    await connection_manager.send_json(
+                        client_id,
+                        {
+                            "type": "pronunciation_feedback",
+                            "score": 0,
+                            "summary": "Could not analyze pronunciation. Please try again.",
+                            "errors": [],
+                        },
+                    )
 
     except WebSocketDisconnect:
         connection_manager.disconnect(client_id)

@@ -19,8 +19,15 @@ class ConversationApp {
             voiceSpeed: 1.0,
             autoPlayVoice: true,
             showTranscription: true,
-            speechLanguage: 'en-US'
+            speechLanguage: 'en-US',
+            pronunciationMode: false
         };
+
+        // Pronunciation mode state
+        this.lastAssistantText = '';
+        this.isRecordingForPronunciation = false;
+        this.mediaRecorder = null;
+        this.audioChunks = [];
 
         // Load saved settings
         this.loadSettings();
@@ -142,6 +149,11 @@ class ConversationApp {
             case 'response':
                 this.hideTypingIndicator();
                 this.addMessage('assistant', data.text);
+                this.lastAssistantText = data.text;
+                break;
+
+            case 'pronunciation_feedback':
+                this.displayPronunciationFeedback(data);
                 break;
 
             case 'audio':
@@ -180,7 +192,7 @@ class ConversationApp {
         messageDiv.className = `message message-${role}`;
 
         const avatar = role === 'user' ? '👤' : '🤖';
-        const audioControls = role === 'assistant' ? this.createAudioControls() : '';
+        const audioControls = role === 'assistant' ? this.createAudioControls(text) : '';
 
         messageDiv.innerHTML = `
             <div class="message-avatar">${avatar}</div>
@@ -194,7 +206,17 @@ class ConversationApp {
         this.scrollToBottom();
     }
 
-    createAudioControls() {
+    createAudioControls(text) {
+        const pronunciationBtn = this.settings.pronunciationMode ? `
+            <button class="message-action practice-pronunciation" title="Practice pronunciation" data-text="${this.escapeHtml(text || '')}">
+                <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/>
+                    <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
+                </svg>
+                <span class="practice-label">Practice</span>
+            </button>
+        ` : '';
+
         return `
             <div class="message-actions">
                 <button class="message-action replay-audio" title="Replay audio">
@@ -202,6 +224,7 @@ class ConversationApp {
                         <polygon points="5 3 19 12 5 21 5 3"/>
                     </svg>
                 </button>
+                ${pronunciationBtn}
             </div>
         `;
     }
@@ -428,12 +451,30 @@ class ConversationApp {
             this.saveSettings();
         });
 
+        // Pronunciation mode toggle
+        const pronunciationToggle = document.getElementById('pronunciationMode');
+        if (pronunciationToggle) {
+            pronunciationToggle.addEventListener('change', (e) => {
+                this.settings.pronunciationMode = e.target.checked;
+                this.saveSettings();
+            });
+        }
+
         // Replay audio buttons (event delegation)
         this.elements.messagesContainer.addEventListener('click', (e) => {
             const replayBtn = e.target.closest('.replay-audio');
             if (replayBtn && this.currentAudio) {
                 this.currentAudio.currentTime = 0;
                 this.currentAudio.play();
+            }
+
+            // Practice pronunciation button
+            const practiceBtn = e.target.closest('.practice-pronunciation');
+            if (practiceBtn) {
+                const text = practiceBtn.dataset.text;
+                if (text) {
+                    this.startPronunciationPractice(text);
+                }
             }
         });
 
@@ -488,11 +529,164 @@ class ConversationApp {
         document.getElementById('showTranscription').checked = this.settings.showTranscription;
         document.getElementById('speechLanguage').value = this.settings.speechLanguage;
 
+        const pronunciationToggle = document.getElementById('pronunciationMode');
+        if (pronunciationToggle) {
+            pronunciationToggle.checked = this.settings.pronunciationMode;
+        }
+
         this.elements.settingsModal.classList.remove('hidden');
     }
 
     closeSettings() {
         this.elements.settingsModal.classList.add('hidden');
+    }
+
+    // Pronunciation Practice Methods
+    async startPronunciationPractice(text) {
+        if (this.isRecordingForPronunciation) {
+            this.stopPronunciationRecording();
+            return;
+        }
+
+        try {
+            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+
+            this.audioChunks = [];
+            this.mediaRecorder = new MediaRecorder(stream, { mimeType: 'audio/webm' });
+
+            this.mediaRecorder.ondataavailable = (event) => {
+                if (event.data.size > 0) {
+                    this.audioChunks.push(event.data);
+                }
+            };
+
+            this.mediaRecorder.onstop = async () => {
+                stream.getTracks().forEach(track => track.stop());
+
+                const audioBlob = new Blob(this.audioChunks, { type: 'audio/webm' });
+                await this.sendPronunciationForAnalysis(audioBlob, text);
+            };
+
+            this.mediaRecorder.start();
+            this.isRecordingForPronunciation = true;
+
+            // Update UI
+            this.showPronunciationRecordingUI(text);
+
+            // Auto-stop after 10 seconds
+            setTimeout(() => {
+                if (this.isRecordingForPronunciation) {
+                    this.stopPronunciationRecording();
+                }
+            }, 10000);
+
+        } catch (error) {
+            console.error('Failed to start pronunciation recording:', error);
+            alert('Could not access microphone. Please grant permission.');
+        }
+    }
+
+    stopPronunciationRecording() {
+        if (this.mediaRecorder && this.isRecordingForPronunciation) {
+            this.mediaRecorder.stop();
+            this.isRecordingForPronunciation = false;
+            this.hidePronunciationRecordingUI();
+        }
+    }
+
+    showPronunciationRecordingUI(text) {
+        // Show recording indicator with the text to practice
+        const indicator = document.createElement('div');
+        indicator.id = 'pronunciationRecording';
+        indicator.className = 'pronunciation-recording-indicator';
+        indicator.innerHTML = `
+            <div class="pronunciation-recording-content">
+                <div class="recording-pulse"></div>
+                <div class="pronunciation-text">
+                    <span class="label">Repeat:</span>
+                    <span class="text">"${this.escapeHtml(text)}"</span>
+                </div>
+                <button class="btn btn-stop" onclick="window.app.stopPronunciationRecording()">
+                    Stop Recording
+                </button>
+            </div>
+        `;
+        document.body.appendChild(indicator);
+    }
+
+    hidePronunciationRecordingUI() {
+        const indicator = document.getElementById('pronunciationRecording');
+        if (indicator) {
+            indicator.remove();
+        }
+    }
+
+    async sendPronunciationForAnalysis(audioBlob, expectedText) {
+        try {
+            // Convert blob to base64
+            const reader = new FileReader();
+            const base64Promise = new Promise((resolve) => {
+                reader.onloadend = () => {
+                    const base64 = reader.result.split(',')[1];
+                    resolve(base64);
+                };
+            });
+            reader.readAsDataURL(audioBlob);
+            const audioBase64 = await base64Promise;
+
+            // Send to server for analysis
+            this.showTypingIndicator();
+
+            this.ws.send(JSON.stringify({
+                type: 'pronunciation',
+                audio: audioBase64,
+                expected_text: expectedText
+            }));
+
+        } catch (error) {
+            console.error('Failed to send pronunciation for analysis:', error);
+            this.hideTypingIndicator();
+        }
+    }
+
+    displayPronunciationFeedback(data) {
+        this.hideTypingIndicator();
+
+        const feedbackDiv = document.createElement('div');
+        feedbackDiv.className = 'message message-feedback';
+
+        const scoreClass = data.score >= 0.8 ? 'score-good' :
+                          data.score >= 0.5 ? 'score-medium' : 'score-low';
+
+        let errorsHtml = '';
+        if (data.errors && data.errors.length > 0) {
+            errorsHtml = `
+                <div class="pronunciation-errors">
+                    <strong>Tips for improvement:</strong>
+                    <ul>
+                        ${data.errors.map(e => `<li><strong>${e.word}:</strong> ${e.tip}</li>`).join('')}
+                    </ul>
+                </div>
+            `;
+        }
+
+        feedbackDiv.innerHTML = `
+            <div class="message-avatar">📊</div>
+            <div class="message-content">
+                <div class="message-bubble pronunciation-feedback">
+                    <div class="pronunciation-score ${scoreClass}">
+                        <span class="score-value">${Math.round(data.score * 100)}%</span>
+                        <span class="score-label">Pronunciation Score</span>
+                    </div>
+                    <p class="pronunciation-summary">${this.escapeHtml(data.summary)}</p>
+                    ${data.transcribed ? `<p class="pronunciation-transcribed">You said: "<em>${this.escapeHtml(data.transcribed)}</em>"</p>` : ''}
+                    ${errorsHtml}
+                </div>
+            </div>
+        `;
+
+        this.elements.messagesContainer.appendChild(feedbackDiv);
+        this.scrollToBottom();
     }
 }
 

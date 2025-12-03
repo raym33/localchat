@@ -776,3 +776,234 @@ body {
     font-size: 0.75rem;
     color: var(--text-muted);
 }
+
+/* =================================
+   Pronunciation Mode Styles
+   ================================= */
+
+/* Settings Divider */
+.setting-divider {
+    border: none;
+    border-top: 1px solid var(--border-color);
+    margin: 1rem 0;
+}
+
+/* Setting Badge (Beta label) */
+.setting-badge {
+    font-size: 0.65rem;
+    background: var(--warning-color);
+    color: #000;
+    padding: 0.1rem 0.4rem;
+    border-radius: 4px;
+    margin-left: 0.5rem;
+    font-weight: 600;
+    text-transform: uppercase;
+}
+
+/* Setting Hint */
+.setting-hint {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    margin-top: 0.5rem;
+    line-height: 1.4;
+}
+
+/* Practice Pronunciation Button */
+.practice-pronunciation {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+    background: var(--success-color);
+    color: white;
+    border: none;
+    padding: 0.35rem 0.6rem;
+    border-radius: var(--border-radius-sm);
+    cursor: pointer;
+    font-size: 0.75rem;
+    transition: all var(--transition-fast);
+}
+
+.practice-pronunciation:hover {
+    background: #16a34a;
+    transform: scale(1.05);
+}
+
+.practice-pronunciation .icon {
+    width: 0.875rem;
+    height: 0.875rem;
+}
+
+.practice-label {
+    font-weight: 500;
+}
+
+/* Pronunciation Recording Indicator */
+.pronunciation-recording-indicator {
+    position: fixed;
+    bottom: 100px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 1000;
+    background: var(--bg-secondary);
+    border: 2px solid var(--error-color);
+    border-radius: var(--border-radius-lg);
+    padding: 1rem 1.5rem;
+    box-shadow: var(--shadow-lg);
+    animation: slideUp 0.3s ease;
+}
+
+@keyframes slideUp {
+    from {
+        opacity: 0;
+        transform: translateX(-50%) translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(-50%) translateY(0);
+    }
+}
+
+.pronunciation-recording-content {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.pronunciation-text {
+    text-align: center;
+}
+
+.pronunciation-text .label {
+    display: block;
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    margin-bottom: 0.25rem;
+}
+
+.pronunciation-text .text {
+    font-size: 1.1rem;
+    font-weight: 500;
+    color: var(--text-primary);
+}
+
+.btn-stop {
+    background: var(--error-color);
+    color: white;
+    border: none;
+    padding: 0.5rem 1rem;
+    border-radius: var(--border-radius-sm);
+    cursor: pointer;
+    font-weight: 500;
+    transition: all var(--transition-fast);
+}
+
+.btn-stop:hover {
+    background: #dc2626;
+}
+
+/* Pronunciation Feedback Message */
+.message-feedback {
+    align-self: center;
+    max-width: 90%;
+}
+
+.pronunciation-feedback {
+    background: var(--bg-tertiary);
+    border: 1px solid var(--border-color);
+}
+
+.pronunciation-score {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 1rem;
+    border-radius: var(--border-radius);
+    margin-bottom: 1rem;
+}
+
+.pronunciation-score.score-good {
+    background: rgba(34, 197, 94, 0.2);
+    border: 1px solid var(--success-color);
+}
+
+.pronunciation-score.score-medium {
+    background: rgba(245, 158, 11, 0.2);
+    border: 1px solid var(--warning-color);
+}
+
+.pronunciation-score.score-low {
+    background: rgba(239, 68, 68, 0.2);
+    border: 1px solid var(--error-color);
+}
+
+.score-value {
+    font-size: 2rem;
+    font-weight: 700;
+}
+
+.score-good .score-value {
+    color: var(--success-color);
+}
+
+.score-medium .score-value {
+    color: var(--warning-color);
+}
+
+.score-low .score-value {
+    color: var(--error-color);
+}
+
+.score-label {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.pronunciation-summary {
+    margin-bottom: 0.75rem;
+    line-height: 1.5;
+}
+
+.pronunciation-transcribed {
+    font-size: 0.875rem;
+    color: var(--text-secondary);
+    margin-bottom: 0.75rem;
+}
+
+.pronunciation-errors {
+    background: var(--bg-secondary);
+    padding: 0.75rem;
+    border-radius: var(--border-radius-sm);
+    margin-top: 0.75rem;
+}
+
+.pronunciation-errors strong {
+    display: block;
+    margin-bottom: 0.5rem;
+    color: var(--text-primary);
+}
+
+.pronunciation-errors ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.pronunciation-errors li {
+    padding: 0.5rem 0;
+    border-bottom: 1px solid var(--border-color);
+    font-size: 0.875rem;
+    line-height: 1.5;
+}
+
+.pronunciation-errors li:last-child {
+    border-bottom: none;
+}
+
+.pronunciation-errors li strong {
+    display: inline;
+    color: var(--warning-color);
+    margin-right: 0.25rem;
+}
